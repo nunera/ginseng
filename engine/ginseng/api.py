@@ -9,8 +9,10 @@ empty list and nulls, per the frozen contract.
 from __future__ import annotations
 
 from functools import lru_cache
+import os
 from typing import Any
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -105,6 +107,15 @@ class HealthResponse(BaseModel):
     seed_default: int
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
 app = FastAPI(title="Ginseng Engine")
 
 app.add_middleware(
@@ -125,6 +136,45 @@ def _cached_persona(seed: int) -> FinancialState:
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok", seed_default=DEFAULT_SEED)
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key.startswith(("YOUR_", "PASTE_")):
+        return ChatResponse(
+            reply="Gemini is not connected yet. Replace the placeholder GEMINI_API_KEY with a real key and restart the engine."
+        )
+
+    system_instruction = (
+        "You are Ginseng's liquidity planning assistant. Give concise, practical answers "
+        "about the user's cash-flow scenario. Explain model outputs plainly, never invent "
+        "numbers, and say when the provided context does not answer a question. Do not "
+        "provide regulated financial advice or tell the user what they must invest in."
+    )
+    prompt = (
+        f"{system_instruction}\n\nCurrent Ginseng scenario context (JSON): {request.context}\n\n"
+        f"User question: {request.message}"
+    )
+    url = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-3.6-flash:generateContent"
+)
+    try:
+        response = httpx.post(
+            url,
+            params={"key": api_key},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=20.0,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        reply = payload["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if not reply:
+            raise ValueError("Gemini returned an empty response")
+        return ChatResponse(reply=reply)
+    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
+        return ChatResponse(reply=f"Gemini could not answer right now: {error}")
 
 
 @app.post("/scenario", response_model=ScenarioResponse)

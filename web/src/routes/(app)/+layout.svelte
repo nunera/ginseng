@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { authStore } from '$lib/auth.svelte';
+	import AgentChat from '$lib/components/AgentChat.svelte';
 	import { scenarioStore } from '$lib/scenario.svelte';
 
 	type AppRoute = '/' | '/future' | '/liquidity' | '/plans';
@@ -31,6 +32,20 @@
 	function isActive(href: string) {
 		return page.url.pathname === href;
 	}
+
+	const agentContext = $derived({
+		horizon_days: scenarioStore.request.horizon_days,
+		coverage_target: scenarioStore.request.coverage_target,
+		operating_buffer: scenarioStore.request.operating_buffer,
+		funding_gap: scenarioStore.response?.funding_gap,
+		required_liquidity_reserve: scenarioStore.response?.required_liquidity_reserve,
+		coverage_at_current_funding: scenarioStore.response?.coverage_at_current_funding,
+		obligations: scenarioStore.request.obligations.map(({ label, amount, due_in_days }) => ({
+			label,
+			amount,
+			due_in_days
+		}))
+	});
 </script>
 
 <div class="terminal-shell">
@@ -85,7 +100,10 @@
 				</a>
 			{/each}
 		</nav>
-		<p class="rail-meta">{scenarioStore.request.paths.toLocaleString()}<br />paths</p>
+		<div class="rail-bottom">
+			<AgentChat context={agentContext} />
+			<p class="rail-meta">{scenarioStore.request.paths.toLocaleString()}<br />paths</p>
+		</div>
 	</aside>
 
 	<main class="app-main">
@@ -279,12 +297,16 @@
 	}
 
 	.rail-meta {
-		margin: auto 0 0;
+		margin: 0;
 		padding: 0.9rem 0.15rem;
 		border-top: 1px solid rgb(255 255 255 / 25%);
 		font-size: 0.53rem;
 		line-height: 1.5;
 		text-align: center;
+	}
+
+	.rail-bottom {
+		margin-top: auto;
 	}
 
 	.app-main {

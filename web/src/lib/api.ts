@@ -19,6 +19,30 @@ export type EngineResult<T> =
 export type HealthResult = EngineResult<HealthResponse>;
 export type ScenarioResult = EngineResult<ScenarioResponse>;
 
+export interface ChatContext {
+		horizon_days?: number;
+		coverage_target?: number;
+		operating_buffer?: number;
+		funding_gap?: number;
+		required_liquidity_reserve?: number;
+		coverage_at_current_funding?: number;
+		obligations?: Array<{ label: string; amount: number; due_in_days: number }>;
+}
+
+export async function postChat(message: string, context: ChatContext): Promise<EngineResult<{ reply: string }>> {
+	let response: Response;
+	try {
+		response = await fetchWithTimeout('http://localhost:8000/chat', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ message, context })
+		});
+	} catch (error) {
+		return { status: 'engine-unreachable', message: describeNetworkError(error) };
+	}
+	return parseJsonResponse<{ reply: string }>(response);
+}
+
 function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
 	return fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
 }
