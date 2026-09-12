@@ -25,7 +25,7 @@
 		{
 			icon: 'reserve',
 			title: 'See the exact reserve',
-			body: 'A running-minimum liquidity requirement at your coverage target — not a guess, a number the model can defend.'
+			body: 'A running-minimum liquidity requirement at your coverage target, computed straight from the simulated paths.'
 		},
 		{
 			icon: 'funding',
@@ -44,11 +44,12 @@
 </svelte:head>
 
 <div class="welcome">
+	<div class="ambient-field" aria-hidden="true">
+		<canvas {@attach dotField({ boundless: true, stockTrace: true })}></canvas>
+	</div>
+
 	<header class="welcome-nav">
-		<a class="nav-brand" href={resolve('/welcome')}>
-			<span class="nav-mark" aria-hidden="true"><img src="/brand/ginseng-avatar-reversed.svg" alt="" /></span>
-			<span>Ginseng</span>
-		</a>
+		<a class="nav-brand" href={resolve('/welcome')}>GINSENG</a>
 		<nav class="nav-actions" aria-label="Account">
 			<a href={resolve('/login')}>Sign in</a>
 			<a class="nav-cta" href={resolve('/login?mode=sign-up')}>Create account</a>
@@ -56,10 +57,13 @@
 	</header>
 
 	<section class="hero" {@attach parallax()}>
-		<canvas class="hero-field" {@attach dotField()}></canvas>
 		<div class="hero-copy" data-parallax-strength="22 14">
-			<p class="hero-kicker">Ginseng · Liquidity workspace</p>
-			<h1>A timing problem, modeled.</h1>
+			<p class="hero-kicker">Liquidity workspace</p>
+			<h1 class="hero-logo" aria-label="Ginseng">
+				<img class="hero-logo-mark" src="/brand/ginseng-avatar-reversed.svg" alt="" />
+				<img class="hero-logo-wordmark" src="/brand/ginseng-wordmark-reversed.svg" alt="" />
+			</h1>
+			<p class="hero-tagline">A timing problem, modeled.</p>
 			<p class="hero-body">
 				Variable-income earners can hold plenty of assets and still have a timing problem.
 				Ginseng runs 2,000 simulated cash paths to show the dollar amount your next 30 days
@@ -126,17 +130,31 @@
 
 <style>
 	.welcome {
-		background: var(--paper);
+		position: relative;
 		color: var(--ink);
+	}
+
+	.ambient-field {
+		position: fixed;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.ambient-field canvas {
+		display: block;
+		width: 100%;
+		height: 100%;
+		background: var(--cobalt-deep);
 	}
 
 	.welcome-nav {
 		position: sticky;
 		z-index: 5;
 		top: 0;
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
-		justify-content: space-between;
 		min-height: 3.5rem;
 		padding: 0 1.5rem;
 		background: var(--cobalt-deep);
@@ -144,32 +162,24 @@
 	}
 
 	.nav-brand {
+		grid-column: 2;
+		justify-self: center;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.55rem;
 		color: var(--paper);
 		font-family: var(--font-sans);
-		font-size: 1rem;
+		font-size: 1.25rem;
 		font-weight: 800;
-		letter-spacing: -0.04em;
+		letter-spacing: 0.16em;
+		line-height: 1;
 		text-decoration: none;
 	}
 
-	.nav-mark {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.4rem;
-		height: 1.4rem;
-	}
 
-	.nav-mark img {
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-	}
 
 	.nav-actions {
+		grid-column: 3;
+		justify-self: end;
 		display: flex;
 		align-items: center;
 		gap: 1rem;
@@ -202,14 +212,7 @@
 		align-items: center;
 		min-height: calc(100dvh - 3.5rem);
 		padding: 3rem 1.75rem;
-		background: var(--cobalt-deep);
-	}
-
-	.hero-field {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
+		background: transparent;
 	}
 
 	.hero-copy {
@@ -239,12 +242,34 @@
 		text-transform: uppercase;
 	}
 
-	.hero-copy h1 {
+	.hero-logo {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
 		margin: 0;
-		font-size: clamp(2.6rem, 6vw, 4.8rem);
-		font-weight: 800;
-		letter-spacing: -0.035em;
-		line-height: 0.98;
+		line-height: 0;
+	}
+
+	.hero-logo img {
+		display: block;
+		flex: none;
+		height: auto;
+	}
+
+	.hero-logo-mark {
+		width: clamp(4rem, 8vw, 6rem);
+	}
+
+	.hero-logo-wordmark {
+		width: clamp(11rem, 25vw, 18rem);
+	}
+
+	.hero-tagline {
+		margin: 0;
+		color: rgb(255 255 255 / 88%);
+		font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+		font-weight: 700;
+		letter-spacing: -0.015em;
 		text-wrap: balance;
 	}
 
@@ -298,9 +323,11 @@
 	.hero-secondary:hover { border-color: var(--paper); }
 
 	.how {
+		position: relative;
 		padding: 5rem 1.75rem;
 		max-width: 68rem;
 		margin: 0 auto;
+		background: var(--paper);
 	}
 
 	.section-kicker {
@@ -372,15 +399,43 @@
 	}
 
 	.frozen {
+		position: relative;
+		overflow: hidden;
 		display: grid;
 		place-items: center;
 		gap: 1.2rem;
 		padding: 6rem 1.75rem;
-		background: var(--cobalt-ink);
+		background: transparent;
 		text-align: center;
 	}
 
+
+	.frozen::before {
+		content: '';
+		position: absolute;
+		z-index: 1;
+		inset: 0;
+		background: rgb(0 0 0 / 14%);
+		backdrop-filter: blur(2.5px);
+		-webkit-backdrop-filter: blur(2.5px);
+		pointer-events: none;
+	}
+
+	.frozen::after {
+		content: '';
+		position: absolute;
+		z-index: 2;
+		inset: 0;
+		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+		background-size: 176px 176px;
+		opacity: 0.68;
+		mix-blend-mode: overlay;
+		pointer-events: none;
+	}
+
 	.frozen-statement {
+		position: relative;
+		z-index: 3;
 		margin: 0;
 		max-width: 24ch;
 		color: var(--paper);
@@ -392,6 +447,8 @@
 	}
 
 	.frozen-body {
+		position: relative;
+		z-index: 3;
 		margin: 0;
 		max-width: 46ch;
 		color: rgb(255 255 255 / 72%);
@@ -401,10 +458,12 @@
 	}
 
 	.final-cta {
+		position: relative;
 		display: grid;
 		place-items: center;
 		gap: 1.1rem;
 		padding: 6rem 1.75rem;
+		background: var(--paper);
 		text-align: center;
 	}
 
@@ -422,12 +481,14 @@
 	}
 
 	.welcome-footer {
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.55rem;
 		padding: 1.6rem;
 		border-top: 1px solid var(--rule);
+		background: var(--paper);
 		color: var(--ink-muted);
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
@@ -443,10 +504,15 @@
 
 	@media (max-width: 48rem) {
 		.welcome-nav { padding: 0 1rem; }
+
 		.hero { padding: 2.5rem 1.25rem; align-items: start; min-height: auto; padding-top: 3.5rem; padding-bottom: 3.5rem; }
 		.how { padding: 3.5rem 1.25rem; }
 		.how-grid { grid-template-columns: 1fr; }
 		.frozen { padding: 4rem 1.25rem; }
 		.final-cta { padding: 4rem 1.25rem; }
+	}
+
+	@media (max-width: 22rem) {
+		.nav-actions > a:not(.nav-cta) { display: none; }
 	}
 </style>
