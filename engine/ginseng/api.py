@@ -157,9 +157,9 @@ def chat(request: ChatRequest) -> ChatResponse:
         f"User question: {request.message}"
     )
     url = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-3.6-flash:generateContent"
-)
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-3.6-flash:generateContent"
+    )
     try:
         response = httpx.post(
             url,
@@ -173,8 +173,14 @@ def chat(request: ChatRequest) -> ChatResponse:
         if not reply:
             raise ValueError("Gemini returned an empty response")
         return ChatResponse(reply=reply)
+    except httpx.HTTPStatusError as error:
+        if error.response.status_code == 429:
+            return ChatResponse(
+                reply="AI assistant is temporarily rate-limited. Please wait and try again."
+            )
+        return ChatResponse(reply=f"Gemini could not answer right now (HTTP {error.response.status_code}).")
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
-        return ChatResponse(reply=f"Gemini could not answer right now: {error}")
+        return ChatResponse(reply="Gemini could not answer right now. Check the engine connection and try again.")
 
 
 @app.post("/scenario", response_model=ScenarioResponse)
